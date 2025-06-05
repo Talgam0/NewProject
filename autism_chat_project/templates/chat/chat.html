@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autism Support Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #e1e8ed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .user-info {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .new-chat-btn {
+            margin: 20px;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: #5a6fd8;
+        }
+
+        .chat-sessions {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .session-item {
+            padding: 15px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .session-item:hover {
+            background: #e9ecef;
+        }
+
+        .session-item.active {
+            background: #e3f2fd;
+            border-left-color: #667eea;
+        }
+
+        .session-title {
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .session-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            background: white;
+        }
+
+        .chat-header h1 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 8px;
+        }
+
+        .message.assistant .message-bubble {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-bottom-left-radius: 8px;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        .input-container {
+            padding: 20px;
+            border-top: 1px solid #e1e8ed;
+            background: white;
+        }
+
+        .input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #6c757d;
+            margin-top: 50px;
+        }
+
+        .welcome-message h3 {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: fixed;
+                left: -100%;
+                z-index: 1000;
+                transition: left 0.3s;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .main-chat {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Autism Support Chat</h2>
+            <div class="user-info">
+                Добро пожаловать!
+            </div>
+        </div>
+
+        <button class="new-chat-btn" onclick="startNewChat()">
+            ➕ Новый чат
+        </button>
+
+        <div class="chat-sessions" id="chatSessions">
+            <div style="padding: 20px; text-align: center; color: #6c757d;">
+                Пока нет сохраненных чатов
+            </div>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-header">
+            <h1 id="chatTitle">Добро пожаловать</h1>
+        </div>
+
+        <div class="messages-container" id="messagesContainer">
+            <div class="welcome-message">
+                <h3>Добро пожаловать в чат поддержки!</h3>
+                <p>Напишите сообщение, чтобы начать общение.</p>
+                <br>
+                <p><strong>Доступные команды:</strong></p>
+                <p>• Расскажите о своих переживаниях</p>
+                <p>• Попросите совет по общению</p>
+                <p>• Спросите о стратегиях преодоления стресса</p>
+                <p>• Обсудите сенсорные особенности</p>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            Ассистент печатает...
+        </div>
+
+        <div class="input-container">
+            <form class="input-form" onsubmit="sendMessage(event)">
+                <input type="text" class="message-input" id="messageInput" 
+                       placeholder="Введите ваше сообщение..." required>
+                <button type="submit" class="send-btn" id="sendBtn">Отправить</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let sessions = [];
+        let messageCount = 0;
+
+        // Простые заготовленные ответы
+        const responses = {
+            'привет': 'Привет! Как дела? Что вас беспокоит сегодня?',
+            'стресс': 'Понимаю, что стресс может быть очень тяжелым. Попробуйте глубокое дыхание: вдох на 4 счета, задержка на 4, выдох на 6. Что именно вызывает у вас стресс?',
+            'общение': 'Общение может быть сложным. Помните: нормально делать паузы в разговоре, просить повторить или уточнить. Какие ситуации в общении вызывают у вас затруднения?',
+            'сенсорика': 'Сенсорные особенности - это нормальная часть аутизма. Используйте наушники, солнцезащитные очки, мягкие ткани - всё, что помогает вам чувствовать себя комфортно.',
+            'помощь': 'Я здесь, чтобы поддержать вас. Вы можете рассказать о своих переживаниях, попросить совет или просто поговорить. Что вас волнует?',
+            'спасибо': 'Пожалуйста! Я рад, что смог помочь. Обращайтесь в любое время, когда понадобится поддержка.',
+            'default': 'Я понимаю ваши переживания. Помните, что вы не одиноки, и ваши чувства важны. Расскажите больше о том, что вас беспокоит?'
+        };
+
+        function sendMessage(event) {
+            event.preventDefault();
+            
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const typingIndicator = document.getElementById('typingIndicator');
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Создаем новую сессию если её нет
+            if (!currentSession) {
+                currentSession = {
+                    id: Date.now(),
+                    title: message.substring(0, 30) + (message.length > 30 ? '...' : ''),
+                    messages: [],
+                    created: new Date()
+                };
+                sessions.unshift(currentSession);
+                updateSessionsList();
+                document.getElementById('chatTitle').textContent = currentSession.title;
+            }
+            
+            // Отключаем кнопку и очищаем поле
+            sendBtn.disabled = true;
+            messageInput.value = '';
+            
+            // Добавляем сообщение пользователя
+            const userMessage = {
+                content: message,
+                type: 'user',
+                time: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})
+            };
+            
+            currentSession.messages.push(userMessage);
+            addMessageToChat(userMessage);
+            
+            // Показываем индикатор печати
+            typingIndicator.style.display = 'block';
+            
+            // Генерируем ответ
+            setTimeout(() => {
+                const response = generateResponse(message);
+                const assistantMessage = {
+                    content: response,
+                    type: 'assistant',
+                    time: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})
+                };
+                
+                currentSession.messages.push(assistantMessage);
+                addMessageToChat(assistantMessage);
+                
+                typingIndicator.style.display = 'none';
+                sendBtn.disabled = false;
+                
+                // Сохраняем в локальное хранилище (если доступно)
+                try {
+                    const savedSessions = JSON.parse(sessionStorage.getItem('chatSessions') || '[]');
+                    const existingIndex = savedSessions.findIndex(s => s.id === currentSession.id);
+                    if (existingIndex >= 0) {
+                        savedSessions[existingIndex] = currentSession;
+                    } else {
+                        savedSessions.unshift(currentSession);
+                    }
+                    sessionStorage.setItem('chatSessions', JSON.stringify(savedSessions.slice(0, 10))); // Сохраняем только последние 10
+                } catch(e) {
+                    console.log('Сохранение недоступно');
+                }
+                
+            }, 1000 + Math.random() * 2000); // Случайная задержка для реалистичности
+        }
+        
+        function generateResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Ищем ключевые слова
+            for (const key in responses) {
+                if (key !== 'default' && lowerMessage.includes(key)) {
+                    return responses[key];
+                }
+            }
+            
+            // Дополнительные проверки по смыслу
+            if (lowerMessage.includes('грустн') || lowerMessage.includes('расстроен') || lowerMessage.includes('плох')) {
+                return 'Мне жаль, что вам сейчас трудно. Ваши чувства абсолютно нормальны. Хотите поговорить о том, что именно вас расстраивает?';
+            }
+            
+            if (lowerMessage.includes('работ') || lowerMessage.includes('учеб') || lowerMessage.includes('школ')) {
+                return 'Рабочие и учебные ситуации могут быть особенно сложными. Важно помнить о своих потребностях и не стесняться просить о разумных приспособлениях. Что конкретно вызывает сложности?';
+            }
+            
+            if (lowerMessage.includes('друз') || lowerMessage.includes('отношени')) {
+                return 'Дружба и отношения важны для всех. Помните, что качество важнее количества - лучше иметь одного понимающего друга, чем много поверхностных знакомых. Как складываются ваши отношения с окружающими?';
+            }
+            
+            return responses.default;
+        }
+        
+        function addMessageToChat(message) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            
+            // Удаляем приветственное сообщение при первом сообщении
+            const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMessage && messageCount === 0) {
+                welcomeMessage.remove();
+            }
+            messageCount++;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.type}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    ${message.content}
+                    <div class="message-time">${message.time}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function startNewChat() {
+            currentSession = null;
+            messageCount = 0;
+            document.getElementById('messagesContainer').innerHTML = `
+                <div class="welcome-message">
+                    <h3>Добро пожаловать в чат поддержки!</h3>
+                    <p>Напишите сообщение, чтобы начать общение.</p>
+                    <br>
+                    <p><strong>Доступные команды:</strong></p>
+                    <p>• Расскажите о своих переживаниях</p>
+                    <p>• Попросите совет по общению</p>
+                    <p>• Спросите о стратегиях преодоления стресса</p>
+                    <p>• Обсудите сенсорные особенности</p>
+                </div>
+            `;
+            document.getElementById('chatTitle').textContent = 'Новый чат';
+            
+            // Убираем активный класс со всех сессий
+            document.querySelectorAll('.session-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
+        
+        function switchToSession(sessionId) {
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            
+            currentSession = session;
+            messageCount = session.messages.length;
+            document.getElementById('chatTitle').textContent = session.title;
+            
+            // Очищаем контейнер сообщений
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.innerHTML = '';
+            
+            // Добавляем все сообщения сессии
+            session.messages.forEach(message => {
+                addMessageToChat(message);
+            });
+            
+            // Обновляем активную сессию в боковой панели
+            document.querySelectorAll('.session-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-session-id="${sessionId}"]`).classList.add('active');
+        }
+        
+        function updateSessionsList() {
+            const chatSessions = document.getElementById('chatSessions');
+            
+            if (sessions.length === 0) {
+                chatSessions.innerHTML = `
+                    <div style="padding: 20px; text-align: center; color: #6c757d;">
+                        Пока нет сохраненных чатов
+                    </div>
+                `;
+                return;
+            }
+            
+            chatSessions.innerHTML = sessions.map(session => `
+                <div class="session-item ${currentSession && session.id === currentSession.id ? 'active' : ''}" 
+                     data-session-id="${session.id}"
+                     onclick="switchToSession(${session.id})">
+                    <div class="session-title">${session.title}</div>
+                    <div class="session-time">${session.created.toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}</div>
+                </div>
+            `).join('');
+        }
+        
+        // Загружаем сохраненные сессии при загрузке страницы (если доступно)
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const savedSessions = JSON.parse(sessionStorage.getItem('chatSessions') || '[]');
+                sessions = savedSessions.map(s => ({
+                    ...s,
+                    created: new Date(s.created)
+                }));
+                updateSessionsList();
+            } catch(e) {
+                console.log('Загрузка сессий недоступна');
+            }
+        });
+    </script>
+</body>
+</html>
